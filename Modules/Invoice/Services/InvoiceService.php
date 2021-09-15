@@ -185,18 +185,8 @@ class InvoiceService implements InvoiceServiceContract
 
     public function taxReportExport($filters)
     {
-        if (count($filters) > 3) {
-            if ($filters['region'] == 'indian') {
-                $invoices = $this->taxReportInvoices($filters);
-                $invoices = $this->formatInvoicesForExportIndian($invoices);
-            } else {
-                $invoices = $this->taxReportInvoices($filters);
-                $invoices = $this->formatInvoicesForExportInternational($invoices);
-            }
-        } else {
-            $invoices = $this->taxReportInvoices($filters);
-            $invoices = $this->formatInvoicesForExportAll($invoices);
-        }
+        $invoices = $this->taxReportInvoices($filters);
+        $invoices = $this->formatInvoicesForExport($invoices);
 
         return Excel::download(new TaxReportExport($invoices), 'TaxReportExport.xlsx');
     }
@@ -210,7 +200,7 @@ class InvoiceService implements InvoiceServiceContract
             ->get() ?: [];
     }
 
-    private function formatInvoicesForExportIndian($invoices)
+    private function formatInvoicesForExport($invoices)
     {
         return $invoices->map(function ($invoice) {
             return [
@@ -219,41 +209,6 @@ class InvoiceService implements InvoiceServiceContract
                 'GST' => $invoice->gst,
                 'Amount (+GST)' => (float) str_replace(['$', '₹'], '', $invoice->invoiceAmount()),
                 'Received amount' => $invoice->amount_paid,
-                'TDS' => $invoice->tds,
-                'Sent at' => $invoice->sent_on->format(config('invoice.default-date-format')),
-                'Payment at' => $invoice->payment_at ? $invoice->payment_at->format(config('invoice.default-date-format')) : '-',
-                'Status' => Str::studly($invoice->status)
-            ];
-        });
-    }
-
-    private function formatInvoicesForExportInternational($invoices)
-    {
-        return $invoices->map(function ($invoice) {
-            return [
-                'Project' => $invoice->project->name,
-                'Amount' => (float) str_replace(['$', '₹'], '', $invoice->display_amount),
-                'Received amount' => $invoice->amount_paid,
-                'Bank Charges' => $invoice->bank_charges,
-                'Conversion Rate Diff' => $invoice->conversion_rate_diff,
-                'Sent at' => $invoice->sent_on->format(config('invoice.default-date-format')),
-                'Payment at' => $invoice->payment_at ? $invoice->payment_at->format(config('invoice.default-date-format')) : '-',
-                'Status' => Str::studly($invoice->status)
-            ];
-        });
-    }
-
-    private function formatInvoicesForExportAll($invoices)
-    {
-        return $invoices->map(function ($invoice) {
-            return [
-                'Project' => $invoice->project->name,
-                'Amount' => $invoice->display_amount,
-                'GST' => $invoice->gst,
-                'Amount (+GST)' => $invoice->invoiceAmount(),
-                'Received amount' => $invoice->amount_paid,
-                'Bank Charges' => $invoice->bank_charges,
-                'Conversion Rate Diff' => $invoice->conversion_rate_diff,
                 'TDS' => $invoice->tds,
                 'Sent at' => $invoice->sent_on->format(config('invoice.default-date-format')),
                 'Payment at' => $invoice->payment_at ? $invoice->payment_at->format(config('invoice.default-date-format')) : '-',
