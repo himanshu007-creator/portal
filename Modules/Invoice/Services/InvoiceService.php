@@ -185,16 +185,10 @@ class InvoiceService implements InvoiceServiceContract
 
     public function taxReportExport($filters)
     {
-        if (count($filters) > 3) {
-            if ($filters['region'] == 'indian') {
-                $invoices = $this->taxReportInvoices($filters);
-                $invoices = $this->formatInvoicesForExportIndian($invoices);
-            } else {
-                $invoices = $this->taxReportInvoices($filters);
-                $invoices = $this->formatInvoicesForExportInternational($invoices);
-            }
+        $invoices = $this->taxReportInvoices($filters);
+        if (isset($filters->region)) {
+            $invoices = $filters['region'] == 'indian' ? $this->formatInvoicesForExportIndian($invoices) : $this->formatInvoicesForExportInternational($invoices);
         } else {
-            $invoices = $this->taxReportInvoices($filters);
             $invoices = $this->formatInvoicesForExportAll($invoices);
         }
 
@@ -215,9 +209,9 @@ class InvoiceService implements InvoiceServiceContract
         return $invoices->map(function ($invoice) {
             return [
                 'Project' => $invoice->project->name,
-                'Amount' => (float) str_replace(['$', '₹'], '', $invoice->display_amount),
+                'Amount' => $invoice->amount,
                 'GST' => $invoice->gst,
-                'Amount (+GST)' => (float) str_replace(['$', '₹'], '', $invoice->invoiceAmount()),
+                'Amount (+GST)' => $invoice->invoiceAmount(),
                 'Received amount' => $invoice->amount_paid,
                 'TDS' => number_format((float) ($invoice->tds), 2),
                 'Sent at' => $invoice->sent_on->format(config('invoice.default-date-format')),
@@ -232,7 +226,7 @@ class InvoiceService implements InvoiceServiceContract
         return $invoices->map(function ($invoice) {
             return [
                 'Project' => $invoice->project->name,
-                'Amount' => (float) str_replace(['$', '₹'], '', $invoice->display_amount),
+                'Amount' => $invoice->amount,
                 'Received amount' => $invoice->amount_paid,
                 'Bank Charges' => $invoice->bank_charges,
                 'Conversion Rate Diff' => $invoice->conversion_rate_diff,
